@@ -1,0 +1,46 @@
+name: Run Tests and Publish Allure Report
+
+on:
+  push:
+    branches: [ main ]  # Или ваша основная ветка
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+
+    - name: Install Allure CLI  # Добавлено: установка Allure CLI
+      run: |
+        wget https://github.com/allure-framework/allure2/releases/download/2.24.0/allure-2.24.0.zip
+        unzip allure-2.24.0.zip
+        export PATH=$PATH:$(pwd)/allure-2.24.0/bin
+        echo "PATH=$PATH:$(pwd)/allure-2.24.0/bin" >> $GITHUB_ENV  # Сохраняем PATH для следующих шагов
+
+    - name: Run tests with Allure
+      run: |
+        pytest --allure-dir=allure-results
+
+    - name: Generate Allure report
+      run: |
+        allure generate allure-results --clean --output allure-report
+
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      if: github.ref == 'refs/heads/main'  # Публикуем только из основной ветки
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./allure-report
